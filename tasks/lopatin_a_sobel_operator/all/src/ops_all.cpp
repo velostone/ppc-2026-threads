@@ -3,11 +3,13 @@
 #include <mpi.h>
 #include <omp.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
+#include <utility>
+#include <vector>
 
 #include "lopatin_a_sobel_operator/common/include/common.hpp"
 #include "util/include/util.hpp"
@@ -80,7 +82,7 @@ bool LopatinASobelOperatorALL::RunImpl() {
 
   lopatin_a_sobel_operator::OutType local_output(portion * input.width, 0);
 
-  if (static_cast<size_t>(proc_rank) < n_procs) {
+  if (std::cmp_less(proc_rank, n_procs)) {
     std::size_t start = 1 + (proc_rank * portion);
     std::size_t end = 1 + ((proc_rank + 1) * portion);
     RunSobel(input, start, end, local_output, start);
@@ -96,7 +98,7 @@ bool LopatinASobelOperatorALL::RunImpl() {
     displs[i] = static_cast<int>((1 + i * portion) * input.width);
   }
 
-  int sendcount = (static_cast<size_t>(proc_rank) < n_procs) ? static_cast<int>(local_output.size()) : 0;
+  int sendcount = std::cmp_less(proc_rank, n_procs) ? static_cast<int>(local_output.size()) : 0;
 
   MPI_Gatherv(local_output.data(), sendcount, MPI_INT, output.data(), recvcounts.data(), displs.data(), MPI_INT, 0,
               MPI_COMM_WORLD);
